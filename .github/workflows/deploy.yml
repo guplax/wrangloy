@@ -1,0 +1,49 @@
+name: Deploy Worker
+on:
+  workflow_dispatch:
+    inputs:
+      choosed:
+        description: 'Select worker app'
+        required: true
+        default: 'b2prx'
+        type: choice
+        options:
+          - 'all'
+          - 'b2prx'
+          #- 'foo'
+
+jobs:
+  wrangler_action_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Deploy b2prx
+        if: ${{ github.event.inputs.choosed == 'b2prx' || github.event.inputs.choosed == 'all' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          workingDirectory: "./src/b2prx"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          vars: |
+            ALLOW_LIST_BUCKET
+            B2_APPLICATION_KEY_ID
+            B2_ENDPOINT
+            BUCKET_NAME
+          secrets: |
+            B2_APPLICATION_KEY
+        env:
+          ALLOW_LIST_BUCKET: ${{ vars.ALLOW_LIST_BUCKET }}
+          B2_APPLICATION_KEY_ID: ${{ vars.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_ENDPOINT: ${{ vars.B2_ENDPOINT }}
+          BUCKET_NAME: ${{ vars.BUCKET_NAME }}
+
+      #- name: Deploy foo
+      #  if: ${{ github.event.inputs.choosed == 'foo' || github.event.inputs.choosed == 'all' }}
+      #  uses: cloudflare/wrangler-action@v3
+      #  with:
+      #    workingDirectory: "./src/foo"
+      #    apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #    accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
