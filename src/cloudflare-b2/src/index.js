@@ -29,6 +29,15 @@ const HTTPS_PORT = "443";
 // How many times to retry a range request where the response is missing content-range
 const RANGE_RETRY_ATTEMPTS = 3;
 
+// CORS Configuration
+const CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+    "Access-Control-Allow-Headers": "Range, If-Modified-Since, If-None-Match, Content-Type, Authorization",
+    "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges, Last-Modified, ETag",
+    "Access-Control-Max-Age": "86400",
+};
+
 // Filter out cf-* and any other headers we don't want to include in the signature
 function filterHeaders(headers, env) {
     // Suppress irrelevant IntelliJ warning
@@ -57,15 +66,45 @@ function isListBucketRequest(env, path) {
         || (env['BUCKET_NAME'] !== "$path" && path.length === 0); // https://bucket-name.endpoint/ or https://endpoint/
 }
 
+/**
+ * Add CORS header to response
+ * @param {Response} response - Original response
+ * @returns {Response} Response with CORS header added
+ */
+function addCorsHeaders(response) {
+    const newResponse = new Response(response.body, response);
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+        newResponse.headers.set(key, value);
+    });
+    return newResponse;
+}
+
+/**
+ * Handling OPTIONS preflight requests
+ * @returns {Response} CORS Pre-detection Response
+ */
+function handleOptions() {
+    return new Response(null, {
+        status: 200,
+        headers: CORS_HEADERS
+    });
+}
+
 // Supress IntelliJ's "unused default export" warning
 // noinspection JSUnusedGlobalSymbols
 export default {
     async fetch(request, env) {
+        // Handling OPTIONS preflight requests
+        if (request.method === 'OPTIONS') {
+            return handleOptions();
+        }
+
         // Only allow GET and HEAD methods
         if (!['GET', 'HEAD'].includes(request.method)){
             return new Response(null, {
                 status: 405,
-                statusText: "Method Not Allowed"
+                statusText: "Method Not Allowed",
+                headers: CORS_HEADERS
             });
         }
 
@@ -185,12 +224,12 @@ export default {
 
             if (requestMethod === 'HEAD') {
                 // Original request was HEAD, so return a new Response without a body
-                return createHeadResponse(response);
+                return addCorsHeaders(createHeadResponse(response));
             }
 
             // Return whatever response we have rather than an error response
             // This response cannot be aborted, otherwise it will raise an exception
-            return response;
+            return addCorsHeaders(response);
         }
 
         // Send the signed request to B2
@@ -199,10 +238,10 @@ export default {
         if (requestMethod === 'HEAD') {
             const response = await fetchPromise;
             // Original request was HEAD, so return a new Response without a body
-            return createHeadResponse(response);
+            return addCorsHeaders(createHeadResponse(response));
         }
 
-        // Return the upstream response unchanged
-        return fetchPromise;
+        // Return the upstream response with CORS headers
+        return addCorsHeaders(await fetchPromise);
     },
 };
