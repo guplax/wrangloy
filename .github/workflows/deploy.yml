@@ -10,7 +10,7 @@ on:
         options:
           - 'all'
           - 'b2prx'
-          #- 'foo'
+          - 'cloudflare-b2'
 
 jobs:
   wrangler_action_deploy:
@@ -40,10 +40,25 @@ jobs:
           B2_ENDPOINT: ${{ vars.B2_ENDPOINT }}
           BUCKET_NAME: ${{ vars.BUCKET_NAME }}
 
-      #- name: Deploy foo
-      #  if: ${{ github.event.inputs.choosed == 'foo' || github.event.inputs.choosed == 'all' }}
-      #  uses: cloudflare/wrangler-action@v3
-      #  with:
-      #    workingDirectory: "./src/foo"
-      #    apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      #    accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy cloudflare-b2
+        if: ${{ github.event.inputs.choosed == 'cloudflare-b2' || github.event.inputs.choosed == 'all' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          workingDirectory: "./src/cloudflare-b2"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          vars: |
+            B2_APPLICATION_KEY_ID
+            B2_ENDPOINT
+            BUCKET_NAME
+            ALLOW_LIST_BUCKET
+            RCLONE_DOWNLOAD
+          secrets: |
+            B2_APPLICATION_KEY
+        env:
+          B2_APPLICATION_KEY_ID: ${{ vars.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_ENDPOINT: ${{ vars.B2_ENDPOINT }}
+          BUCKET_NAME: ${{ vars.BUCKET_NAME }}
+          ALLOW_LIST_BUCKET: ${{ vars.ALLOW_LIST_BUCKET }}
+          RCLONE_DOWNLOAD: ${{ vars.RCLONE_DOWNLOAD }}
